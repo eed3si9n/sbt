@@ -19,10 +19,27 @@ object RawCompileLike
 {
 	type Gen = (Seq[File], Seq[File], File, Seq[String], Int, Logger) => Unit
 
+	private def optionFiles(options: Seq[String]): List[File] = {
+		val fileOptions = Set("-doc-root-content")
+		@annotation.tailrec
+		def loop(opt: List[String], result: List[File]): List[File] = {
+			opt.dropWhile(! fileOptions.contains(_)) match {
+				case List(_, fileOpt, tail @ _*) =>
+				{
+					val file = new File(fileOpt)
+					if(file.isFile) loop(tail.toList, file :: result)
+					else loop(tail.toList, result)
+				}
+				case Nil | List(_) => result
+			}
+		}
+		loop(options.toList, Nil)
+	}
+
 	def cached(cache: File, doCompile: Gen): Gen = (sources, classpath, outputDirectory, options, maxErrors, log) =>
 	{
 		type Inputs = FilesInfo[HashFileInfo] :+: FilesInfo[ModifiedFileInfo] :+: String :+: File :+: Seq[String] :+: Int :+: HNil
-		val inputs: Inputs = hash(sources.toSet) :+: lastModified(classpath.toSet) :+: classpath.absString :+: outputDirectory :+: options :+: maxErrors :+: HNil
+		val inputs: Inputs = hash(sources.toSet ++ optionFiles(options)) :+: lastModified(classpath.toSet) :+: classpath.absString :+: outputDirectory :+: options :+: maxErrors :+: HNil
 		implicit val stringEquiv: Equiv[String] = defaultEquiv
 		implicit val fileEquiv: Equiv[File] = defaultEquiv
 		implicit val intEquiv: Equiv[Int] = defaultEquiv
