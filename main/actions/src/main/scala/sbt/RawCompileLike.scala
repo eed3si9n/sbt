@@ -19,11 +19,11 @@ object RawCompileLike
 {
 	type Gen = (Seq[File], Seq[File], File, Seq[String], Int, Logger) => Unit
 
-	private def optionFiles(options: Seq[String]): List[File] = {
-		val fileOptions = Set("-doc-root-content")
+	private def optionFiles(options: Seq[String], fileInputOpts: Seq[String]): List[File] =
+	{
 		@annotation.tailrec
 		def loop(opt: List[String], result: List[File]): List[File] = {
-			opt.dropWhile(! fileOptions.contains(_)) match {
+			opt.dropWhile(! fileInputOpts.contains(_)) match {
 				case List(_, fileOpt, tail @ _*) =>
 				{
 					val file = new File(fileOpt)
@@ -36,10 +36,11 @@ object RawCompileLike
 		loop(options.toList, Nil)
 	}
 
-	def cached(cache: File, doCompile: Gen): Gen = (sources, classpath, outputDirectory, options, maxErrors, log) =>
+	def cached(cache: File, doCompile: Gen): Gen = cached(cache, Seq(), doCompile)
+	def cached(cache: File, fileInputOpts: Seq[String], doCompile: Gen): Gen = (sources, classpath, outputDirectory, options, maxErrors, log) =>
 	{
 		type Inputs = FilesInfo[HashFileInfo] :+: FilesInfo[ModifiedFileInfo] :+: String :+: File :+: Seq[String] :+: Int :+: HNil
-		val inputs: Inputs = hash(sources.toSet ++ optionFiles(options)) :+: lastModified(classpath.toSet) :+: classpath.absString :+: outputDirectory :+: options :+: maxErrors :+: HNil
+		val inputs: Inputs = hash(sources.toSet ++ optionFiles(options, fileInputOpts)) :+: lastModified(classpath.toSet) :+: classpath.absString :+: outputDirectory :+: options :+: maxErrors :+: HNil
 		implicit val stringEquiv: Equiv[String] = defaultEquiv
 		implicit val fileEquiv: Equiv[File] = defaultEquiv
 		implicit val intEquiv: Equiv[Int] = defaultEquiv
