@@ -259,6 +259,7 @@ class SameAPI(includePrivate: Boolean, includeParamNames: Boolean) {
   def sameClassLikeSpecificAPI(a: ClassLike, b: ClassLike): Boolean =
     sameDefinitionType(a.definitionType, b.definitionType) &&
       sameType(a.selfType, b.selfType) &&
+      sameSeq(a.childrenOfSealedClass, b.childrenOfSealedClass)(sameType) &&
       sameStructure(a.structure, b.structure)
 
   def sameValueParameters(a: Seq[ParameterList], b: Seq[ParameterList]): Boolean =
