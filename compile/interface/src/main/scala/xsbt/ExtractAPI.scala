@@ -208,11 +208,17 @@ class ExtractAPI[GlobalType <: CallbackGlobal](val global: GlobalType,
         s.asMethod.paramss.flatten map (_.info) exists (t => isDerivedValueClass(t.typeSymbol))
       }
 
-      def hasValueClassAsReturnType(tpe: Type): Boolean = tpe match {
-        case PolyType(_, base) => hasValueClassAsReturnType(base)
-        case MethodType(_, resultType) => hasValueClassAsReturnType(resultType)
-        case Nullary(resultType) => hasValueClassAsReturnType(resultType)
-        case resultType => isDerivedValueClass(resultType.typeSymbol)
+      // Note: We only inspect the "outermost type" (i.e. no recursion) because we don't need to
+      // inspect after erasure a function that would, for instance, return a function that returns
+      // a subtype of AnyVal.
+      val hasValueClassAsReturnType: Boolean = {
+        val tpe = viewer(in).memberInfo(s)
+        tpe match {
+          case PolyType(_, base)         => isAnyValSubtype(base.typeSymbol)
+          case MethodType(_, resultType) => isAnyValSubtype(resultType.typeSymbol)
+          case Nullary(resultType)       => isAnyValSubtype(resultType.typeSymbol)
+          case resultType                => isAnyValSubtype(resultType.typeSymbol)
+        }
       }
 
       val inspectPostErasure = hasValueClassAsParameter || hasValueClassAsReturnType(viewer(in).memberInfo(s))
@@ -241,7 +247,7 @@ class ExtractAPI[GlobalType <: CallbackGlobal](val global: GlobalType,
               // of def foo.
               val beforeErasure =
                 build(resultType, typeParams, parameterList(params) :: valueParameters)
-              val afterErasure  =
+              val afterErasure =
                 if (inspectPostErasure)
                   build(resultType, typeParams, parameterList(mType.params, erase = true) :: valueParameters)
                 else
@@ -568,7 +574,6 @@ class ExtractAPI[GlobalType <: CallbackGlobal](val global: GlobalType,
       case None =>
         s.fullName
     }
-
 
   /* Representation for the self type of a class symbol `s`, or `emptyType` for an *unascribed* self variable (or no self variable at all).
      Only the self variable's explicitly ascribed type is relevant for incremental compilation. */
