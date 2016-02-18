@@ -16,8 +16,8 @@ class ExtractAPISpecification extends Specification {
   "Children of a sealed class" in {
     def compileAndGetFooClassApi(src: String): ClassLike = {
       val compilerForTesting = new ScalaCompilerForUnitTesting
-      val sourceApi = compilerForTesting.extractApiFromSrc(src)
-      val FooApi = sourceApi.definitions().find(_.name() == "Foo").get.asInstanceOf[ClassLike]
+      val apis = compilerForTesting.extractApisFromSrc(src)
+      val FooApi = apis.find(_.name() == "Foo").get
       FooApi
     }
     val src1 =
@@ -36,9 +36,9 @@ class ExtractAPISpecification extends Specification {
 
   def stableExistentialNames: Boolean = {
     def compileAndGetFooMethodApi(src: String): Def = {
-      val compilerForTesting = new ScalaCompilerForUnitTesting(nameHashing = false)
-      val sourceApi = compilerForTesting.extractApiFromSrc(src)
-      val FooApi = sourceApi.definitions().find(_.name() == "Foo").get.asInstanceOf[ClassLike]
+      val compilerForTesting = new ScalaCompilerForUnitTesting
+      val sourceApi = compilerForTesting.extractApisFromSrc(src)
+      val FooApi = sourceApi.find(_.name() == "Foo").get
       val fooMethodApi = FooApi.structure().declared().find(_.name == "foo").get
       fooMethodApi.asInstanceOf[Def]
     }
