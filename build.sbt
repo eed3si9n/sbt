@@ -7,7 +7,7 @@ import Sxr.sxr
 // but can be shared across the multi projects.
 def buildLevelSettings: Seq[Setting[_]] = inThisBuild(Seq(
   organization := "org.scala-sbt",
-  version := "0.13.10-SNAPSHOT",
+  version := "0.13.12-SNAPSHOT",
   bintrayOrganization := Some(if (publishStatus.value == "releases") "typesafe" else "sbt"),
   bintrayRepository := s"ivy-${publishStatus.value}",
   bintrayPackage := "sbt",
@@ -28,7 +28,24 @@ def commonSettings: Seq[Setting[_]] = Seq(
   incOptions := incOptions.value.withNameHashing(true),
   crossScalaVersions := Seq(scala210),
   bintrayPackage := (bintrayPackage in ThisBuild).value,
-  bintrayRepository := (bintrayRepository in ThisBuild).value
+  bintrayRepository := (bintrayRepository in ThisBuild).value,
+  test in assembly := {},
+  assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = true),
+  assemblyMergeStrategy in assembly := {
+    case PathList(ps @ _*) if ps.last == "javax.inject.Named"      => MergeStrategy.first
+    case PathList(ps @ _*) if ps.last endsWith ".class"            => MergeStrategy.first
+    case PathList(ps @ _*) if ps.last endsWith "module.properties" => MergeStrategy.first
+    case PathList(ps @ _*) if ps.last == "MANIFEST.MF"             => MergeStrategy.rename
+    case "LICENSE"                                                 => MergeStrategy.first
+    case "NOTICE"                                                  => MergeStrategy.first
+    // excluded from fat jar because otherwise we may pick it up when determining the `actualVersion`
+    // of other scala instances.
+    case "compiler.properties"                                     => MergeStrategy.discard
+
+    case x =>
+      val oldStrategy = (assemblyMergeStrategy in assembly).value
+      oldStrategy(x)
+  }
 )
 
 def minimalSettings: Seq[Setting[_]] =
@@ -40,6 +57,31 @@ def baseSettings: Seq[Setting[_]] =
 
 def testedBaseSettings: Seq[Setting[_]] =
   baseSettings ++ testDependencies
+
+
+val altLocalRepoName = "alternative-local"
+val altLocalRepoPath = sys.props("user.home") + "/.ivy2/sbt-alternative"
+lazy val altLocalResolver = Resolver.file(altLocalRepoName, file(sys.props("user.home") + "/.ivy2/sbt-alternative"))(Resolver.ivyStylePatterns)
+lazy val altLocalPublish = TaskKey[Unit]("alt-local-publish", "Publishes an artifact locally to an alternative location.")
+def altPublishSettings: Seq[Setting[_]] = Seq(
+  resolvers += altLocalResolver,
+  altLocalPublish := {
+    val config = (Keys.publishLocalConfiguration).value
+    val moduleSettings = (Keys.moduleSettings).value
+    val ivy = new IvySbt((ivyConfiguration.value))
+
+    val module =
+        new ivy.Module(moduleSettings)
+    val newConfig =
+       new PublishConfiguration(
+           config.ivyFile,
+           altLocalRepoName,
+           config.artifacts,
+           config.checksums,
+           config.logging)
+    streams.value.log.info("Publishing " + module + " to local repo: " + altLocalRepoName)
+    IvyActions.publish(module, newConfig, streams.value.log)
+  })
 
 lazy val sbtRoot: Project = (project in file(".")).
   configs(Sxr.sxrConf).
@@ -93,7 +135,8 @@ lazy val interfaceProj = (project in file("interface")).
       sourceManaged in Compile,
       mainClass in datatypeProj in Compile,
       runner,
-      streams) map generateAPICached
+      streams) map generateAPICached,
+    altPublishSettings
   )
 
 // defines operations on the API of a source, including determining whether it has changed and converting it to a string
@@ -307,7 +350,8 @@ lazy val compileInterfaceProj = (project in compilePath / "interface").
     // needed because we fork tests and tests are ran in parallel so we have multiple Scala
     // compiler instances that are memory hungry
     javaOptions in Test += "-Xmx1G",
-    publishArtifact in (Compile, packageSrc) := true
+    publishArtifact in (Compile, packageSrc) := true,
+    altPublishSettings
   )
 
 // Implements the core functionality of detecting and propagating changes incrementally.
@@ -346,11 +390,24 @@ lazy val compilerIntegrationProj = (project in (compilePath / "integration")).
     name := "Compiler Integration"
   )
 
+lazy val packageBridgeSource = settingKey[Boolean]("Whether to package the compiler bridge sources in compiler ivy project's resources.")
 lazy val compilerIvyProj = (project in compilePath / "ivy").
   dependsOn (ivyProj, compilerProj).
   settings(
     baseSettings,
-    name := "Compiler Ivy Integration"
+    name := "Compiler Ivy Integration",
+    packageBridgeSource := false,
+    resourceGenerators in Compile <+= Def.task {
+      if (packageBridgeSource.value) {
+        val compilerBridgeSrc = (Keys.packageSrc in (compileInterfaceProj, Compile)).value
+        val xsbtiJAR = (Keys.packageBin in (interfaceProj, Compile)).value
+        // They are immediately used by the static launcher.
+        val included = Set("scala-compiler.jar", "scala-library.jar", "scala-reflect.jar")
+        val scalaJars = (externalDependencyClasspath in Compile).value.map(_.data).filter(j => included contains j.getName)
+        Seq(compilerBridgeSrc, xsbtiJAR) ++ scalaJars
+      }
+      else Nil
+    }
   )
 
 lazy val scriptedBaseProj = (project in scriptedPath / "base").
@@ -437,6 +494,11 @@ lazy val mavenResolverPluginProj = (project in file("sbt-maven-resolver")).
 def scriptedTask: Def.Initialize[InputTask[Unit]] = Def.inputTask {
   val result = scriptedSource(dir => (s: State) => scriptedParser(dir)).parsed
   publishAll.value
+  // These two projects need to be visible in a repo even if the default
+  // local repository is hidden, so we publish them to an alternate location and add
+  // that alternate repo to the running scripted test (in Scripted.scriptedpreScripted).
+  (altLocalPublish in interfaceProj).value
+  (altLocalPublish in compileInterfaceProj).value
   doScripted((sbtLaunchJar in bundledLauncherProj).value, (fullClasspath in scriptedSbtProj in Test).value,
     (scalaInstance in scriptedSbtProj).value, scriptedSource.value, result, scriptedPrescripted.value)
 }
@@ -468,7 +530,7 @@ def rootSettings = fullDocSettings ++
   Util.publishPomSettings ++ otherRootSettings ++ Formatting.sbtFilesSettings ++
   Transform.conscriptSettings(bundledLauncherProj)
 def otherRootSettings = Seq(
-  Scripted.scriptedPrescripted := { _ => },
+  Scripted.scriptedPrescripted := { addSbtAlternateResolver _ },
   Scripted.scripted <<= scriptedTask,
   Scripted.scriptedUnpublished <<= scriptedUnpublishedTask,
   Scripted.scriptedSource := (sourceDirectory in sbtProj).value / "sbt-test",
@@ -485,8 +547,28 @@ def otherRootSettings = Seq(
       IO.write(inj, "addMavenResolverPlugin")
       // sLog.value.info(s"""Injected project/maven.sbt to $f""")
     }
+
+    addSbtAlternateResolver(f)
   }
 ))
+
+def addSbtAlternateResolver(scriptedRoot: File) = {
+  val resolver = scriptedRoot / "project" / "AddResolverPlugin.scala"
+  if (!resolver.exists) {
+    IO.write(resolver, s"""import sbt._
+                          |import Keys._
+                          |
+                          |object AddResolverPlugin extends AutoPlugin {
+                          |  override def requires = sbt.plugins.JvmPlugin
+                          |  override def trigger = allRequirements
+                          |
+                          |  override lazy val projectSettings = Seq(resolvers += alternativeLocalResolver)
+                          |  lazy val alternativeLocalResolver = Resolver.file("$altLocalRepoName", file("$altLocalRepoPath"))(Resolver.ivyStylePatterns)
+                          |}
+                          |""".stripMargin)
+  }
+}
+
 lazy val docProjects: ScopeFilter = ScopeFilter(
   inAnyProject -- inProjects(sbtRoot, sbtProj, scriptedBaseProj, scriptedSbtProj, scriptedPluginProj, mavenResolverPluginProj),
   inConfigurations(Compile)
@@ -519,7 +601,7 @@ lazy val safeUnitTests = taskKey[Unit]("Known working tests (for both 2.10 and 2
 lazy val safeProjects: ScopeFilter = ScopeFilter(
   inProjects(mainSettingsProj, mainProj, ivyProj, completeProj,
     actionsProj, classpathProj, collectionProj, compileIncrementalProj,
-    logProj, runProj, stdTaskProj, compilerProj),
+    logProj, runProj, stdTaskProj, compilerProj, compileInterfaceProj),
   inConfigurations(Test)
 )
 lazy val otherUnitTests = taskKey[Unit]("Unit test other projects")
@@ -593,6 +675,17 @@ def customCommands: Seq[Setting[_]] = Seq(
       "compile" ::
       "publish" ::
       "bintrayRelease" ::
+      state
+  },
+  // Produces a fat runnable JAR that contains everything needed to use sbt.
+  commands += Command.command("install") { state =>
+    val packageBridgeSourceKey = packageBridgeSource.key.label
+    val compilerIvy = compilerIvyProj.id
+    val sbt = sbtProj.id
+    s"$compilerIvy/clean" ::
+      s"set $packageBridgeSourceKey in $compilerIvy := true" ::
+      s"$sbt/assembly" ::
+      s"set $packageBridgeSourceKey in $compilerIvy := false" ::
       state
   }
 )
