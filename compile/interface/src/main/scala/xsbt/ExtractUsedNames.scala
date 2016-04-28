@@ -174,7 +174,8 @@ class ExtractUsedNames[GlobalType <: CallbackGlobal](val global: GlobalType) ext
     }
 
     (symbol != NoSymbol) &&
-      (callback.includeSynthToNameHashing || !symbol.isSynthetic) &&
+      // include all synth names for class-based name hashing
+      // (callback.includeSynthToNameHashing || !symbol.isSynthetic) &&
       !emptyName(symbol.name)
   }
 }

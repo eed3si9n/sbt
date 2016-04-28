@@ -81,7 +81,8 @@ private[inc] abstract class IncrementalCommon(log: Logger, options: IncOptions) 
     } else invalidated
   }
 
-  protected def invalidatedPackageObjects(invalidatedClasses: Set[String], relations: Relations): Set[String]
+  protected def invalidatedPackageObjects(invalidatedClasses: Set[String], relations: Relations,
+    apis: APIs): Set[String]
 
   /**
    * Logs API changes using debug-level logging. The API are obtained using the APIDiff class.

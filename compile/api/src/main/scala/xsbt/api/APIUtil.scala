@@ -17,6 +17,9 @@ object APIUtil {
 
   def isScalaSourceName(name: String): Boolean = name.endsWith(".scala")
 
+  def hasPackageObject(analyzedClass: AnalyzedClass): Boolean =
+    analyzedClass.api.objectApi.definitionType == DefinitionType.PackageModule
+
   def hasMacro(c: ClassLike): Boolean =
     {
       val check = new HasMacro
@@ -72,7 +75,7 @@ object APIUtil {
       case _ => true
     }
 
-  private val emptyModifiers = new Modifiers(false, false, false, false, false, false, false)
+  private val emptyModifiers = new Modifiers(false, false, false, false, false, false, false, false)
   private val emptyStructure = new Structure(lzy(Array.empty), lzy(Array.empty), lzy(Array.empty))
   def emptyClassLike(name: String, definitionType: DefinitionType): ClassLike =
     new xsbti.api.ClassLike(definitionType, lzy(emptyType), lzy(emptyStructure), Array.empty, Array.empty, true,

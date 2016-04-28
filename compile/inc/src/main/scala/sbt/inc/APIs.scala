@@ -39,7 +39,7 @@ object APIs {
     new MAPIs(internal, external)
   def empty: APIs = apply(Map.empty, Map.empty)
 
-  val emptyModifiers = new Modifiers(false, false, false, false, false, false, false)
+  val emptyModifiers = new Modifiers(false, false, false, false, false, false, false, false)
   val emptyName = ""
   val emptyAPI = APIUtil.emptyClassLike(emptyName, DefinitionType.ClassDef)
   val emptyAPIHash = -1
@@ -69,8 +69,6 @@ private class MAPIs(val internal: Map[String, AnalyzedClass], val external: Map[
 
   def internalAPI(className: String) = getAPI(internal, className)
   def externalAPI(ext: String) = getAPI(external, ext)
-
-  override def hasPackageObject(src: File): Boolean = internalAPI(src).hasPackageObject
 
   override def equals(other: Any): Boolean = other match {
     case o: MAPIs => {

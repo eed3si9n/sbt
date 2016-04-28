@@ -5,7 +5,6 @@ AnalyzedClass
 	apiHash: Int
 	nameHashes: NameHashes
 	hasMacro: Boolean
-	hasPackageObject: Boolean
 
 Companions
 	classApi: ClassLike
