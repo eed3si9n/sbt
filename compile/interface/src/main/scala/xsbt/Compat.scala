@@ -45,15 +45,26 @@ abstract class Compat {
   val Nullary = global.NullaryMethodType
   val ScalaObjectClass = definitions.ScalaObjectClass
 
-  // `afterPostErasure` doesn't exist in Scala < 2.10
-  implicit def withAfterPostErasure(global: Global): WithAfterPostErasure = new WithAfterPostErasure(global)
-  class WithAfterPostErasure(global: Global) {
-    def afterPostErasure[T](op: => T): T = op
+  // `transformedType` doesn't exist in Scala < 2.10
+  implicit def withTransformedType(global: Global): WithTransformedType = new WithTransformedType(global)
+  class WithTransformedType(global: Global) {
+    def transformedType(tpe: Type): Type = tpe
   }
-  // `exitingPostErasure` was called `afterPostErasure` in 2.10
-  implicit def withExitingPostErasure(global: Global): WithExitingPostErasure = new WithExitingPostErasure(global)
-  class WithExitingPostErasure(global: Global) {
-    def exitingPostErasure[T](op: => T): T = global afterPostErasure op
+
+  /**
+   * Traverses given type and collects result of applying a partial function `pf`.
+   *
+   * NOTE: This class exists in Scala 2.10 as CollectTypeCollector but does not in earlier
+   * versions (like 2.9) of Scala compiler that incremental cmpiler supports so we had to
+   * reimplement that class here.
+   */
+  class CollectTypeTraverser[T](pf: PartialFunction[Type, T]) extends TypeTraverser {
+    var collected: List[T] = Nil
+    def traverse(tpe: Type): Unit = {
+      if (pf.isDefinedAt(tpe))
+        collected = pf(tpe) :: collected
+      mapOver(tpe)
+    }
   }
 
   private[this] final class MiscCompat {
@@ -112,8 +123,8 @@ abstract class Compat {
     }
     lazy val AnyValClass = global.rootMirror.getClassIfDefined("scala.AnyVal")
 
-    def isAnyValSubtype(sym: Symbol): Boolean = sym.isNonBottomSubClass(AnyValClass)
-
+    def isDerivedValueClass(sym: Symbol): Boolean =
+      sym.isNonBottomSubClass(AnyValClass) && !definitions.ScalaValueClasses.contains(sym)
   }
 
   object MacroExpansionOf {
