@@ -19,6 +19,8 @@ import java.io.{
   PrintWriter
 }
 
+import scala.annotation.tailrec
+import scala.util.control.Exception.catching
 import sbt.internal.io.DeferredWriter
 import sbt.io.IO
 import sbt.io.syntax._
@@ -155,13 +157,30 @@ object Streams {
 
       def log(sid: String): ManagedLogger = mkLogger(a, text(sid))
 
-      def make[T <: Closeable](a: Key, sid: String)(f: File => T): T = synchronized {
+      // Creates log file before returning.
+      // Due to task concurrency this call can fail at any point in time.
+      // A long-term fix might be split log directory, use native log4j appender,
+      // and/or block `clean` task until it can have exclusive access to `target` directory.
+      def make[T <: Closeable](a: Key, sid: String)(f: File => T): T = {
         checkOpen()
         val file = taskDirectory(a) / sid
-        IO.touch(file, false)
-        val t = f(file)
-        opened ::= t
-        t
+        def doMake: T = synchronized {
+          IO.touch(file, false)
+          val t = f(file)
+          opened ::= t
+          t
+        }
+        @tailrec def retry(n: Int)(run: => T): T =
+          catching(classOf[IOException]).either(run) match {
+            case Right(x) => x
+            case Left(e) =>
+              if (n <= 0) throw e
+              else {
+                Thread.sleep(100)
+                retry(n - 1)(run)
+              }
+          }
+        retry(30) { doMake }
       }
 
       def key: Key = a
