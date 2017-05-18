@@ -43,10 +43,14 @@ object TestLogger {
       if (per.buffered) {
         buffs foreach { _.record() }
       }
-      new ContentLogger(wrap(newLog), () => {
-        buffs foreach { _.stopQuietly() }
-        per.flush()
-      })
+      new ContentLogger(
+        wrap(newLog),
+        () => {
+          buffs foreach { _.stopQuietly() }
+          per.flush()
+          LogExchange.unbindLoggerAppenders(newLog.name)
+        }
+      )
     }
     global.registerStringCodec[TestStringEvent]
     val config = new TestLogging(wrap(global), global, makePerTest)
