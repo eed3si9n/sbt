@@ -3,13 +3,18 @@ package internal.testing
 
 import testing.{ Logger => TLogger }
 import sbt.internal.util.{ ManagedLogger, BufferedAppender }
-import sbt.util.{ Level, LogExchange }
+import sbt.util.{ Level, LogExchange, ShowLines }
 import sbt.protocol.testing._
 import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.JavaConverters._
 
 object TestLogger {
   import sbt.protocol.testing.codec.JsonProtocol._
+
+  implicit val testStringEventShowLines: ShowLines[TestStringEvent] =
+    ShowLines[TestStringEvent]({
+      case a: TestStringEvent => List(a.value)
+    })
 
   private def generateName: String =
     "test-" + generateId.incrementAndGet
@@ -43,6 +48,7 @@ object TestLogger {
         per.flush()
       })
     }
+    global.registerStringCodec[TestStringEvent]
     val config = new TestLogging(wrap(global), global, makePerTest)
     new TestLogger(config)
   }
