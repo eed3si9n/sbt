@@ -72,7 +72,7 @@ val mimaSettings = Def settings (
 )
 
 lazy val sbtRoot: Project = (project in file("."))
-  .enablePlugins(ScriptedPlugin) // , SiteScaladocPlugin, GhpagesPlugin)
+  .enablePlugins(ScriptedPlugin, ScalaUnidocPlugin) // , SiteScaladocPlugin, GhpagesPlugin)
   .configs(Sxr.SxrConf)
   .aggregate(nonRoots: _*)
   .settings(
