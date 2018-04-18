@@ -186,6 +186,8 @@ object BuiltinCommands {
       loadFailed,
       Cross.crossBuild,
       Cross.switchVersion,
+      CrossJ.switchJavaHome,
+      CrossJ.crossJavaHome,
       PluginCross.pluginCross,
       PluginCross.pluginSwitch,
       Cross.crossRestoreSession,

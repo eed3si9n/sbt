@@ -404,4 +404,7 @@ $SwitchCommand [<scala-version>=]<scala-home>[!] [-v] [<command>]
 
   See also `help $CrossCommand`
 """
+
+  val JavaHomeCrossCommand = "j"
+  val JavaHomeSwitchCommand = "jj"
 }
