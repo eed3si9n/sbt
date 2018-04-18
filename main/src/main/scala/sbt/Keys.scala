@@ -219,7 +219,7 @@ object Keys {
   val scalaCompilerBridgeSource = settingKey[ModuleID]("Configures the module ID of the sources of the compiler bridge.").withRank(CSetting)
   val scalaArtifacts = settingKey[Seq[String]]("Configures the list of artifacts which should match the Scala binary version").withRank(CSetting)
   val enableBinaryCompileAnalysis = settingKey[Boolean]("Writes the analysis file in binary format")
-  val crossJavaHomes = settingKey[Seq[File]]("The java homes used during JDK cross testing")
+  val crossJavaVersions = settingKey[Seq[String]]("The java versions used during JDK cross testing")
 
   val clean = taskKey[Unit]("Deletes files produced by the build, such as generated sources, compiled classes, and task caches.").withRank(APlusTask)
   val console = taskKey[Unit]("Starts the Scala interpreter with the project classes on the classpath.").withRank(APlusTask)

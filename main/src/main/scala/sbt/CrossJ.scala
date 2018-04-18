@@ -47,10 +47,15 @@ object CrossJ {
 
   private def crossJavaHome(extracted: Extracted, proj: ResolvedReference): Seq[File] = {
     import extracted._
-    (crossJavaHomes in proj get structure.data) getOrElse {
-      // reading scalaVersion is a one-time deal
-      (javaHome in proj get structure.data).toSeq
-    }.flatten
+    val discovered = (discoveredJavaHomes in proj get structure.data).get
+
+    (crossJavaVersions in proj get structure.data)
+      .map(_.map(discovered.get))
+      .getOrElse {
+        // reading scalaVersion is a one-time deal
+        (javaHome in proj get structure.data).toSeq
+      }
+      .flatten
   }
 
   private def switchCommandImpl(state: State, args: SwitchJavaHome): State = {
