@@ -235,7 +235,7 @@ object CrossJ {
 
   final val JvmDirectories = Seq(
     ("/usr/lib/jvm", "java-([0-9]+)-.*".r, ""),
-    ("/Library/Java/JavaVirtualMachines", "jdk[1\\.]?([0-9]+)\\..*".r, "Contents/Home")
+    ("/Library/Java/JavaVirtualMachines", "jdk[1\\.]*([0-9]+)\\..*".r, "Contents/Home")
   )
 
   private[sbt] def discoverJavaHomes(): Initialize[Map[String, File]] = Def.setting {
