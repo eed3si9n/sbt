@@ -1,7 +1,9 @@
 package sbt
 
 import java.io.File
+import java.nio.file.Paths
 
+import sbt.Def.Initialize
 import sbt.Def.{ ScopedKey, Setting }
 import sbt.Def.ScopedKey
 import sbt.Cross.{ crossVersions, switchScalaVersion, _ }
@@ -13,6 +15,7 @@ import sbt.internal.CommandStrings.{
   crossHelp,
   switchHelp
 }
+import scala.collection.breakOut
 import sbt.internal.util.complete.DefaultParsers._
 import sbt.internal.util.AttributeKey
 import sbt.internal.util.complete.{ DefaultParsers, Parser }
@@ -223,6 +226,28 @@ object CrossJ {
 
   private def captureCurrentSession(state: State, extracted: Extracted): State = {
     state.put(CapturedSession, extracted.session.rawAppend)
+  }
+
+  final val JvmDirectories = Seq(
+    ("/usr/lib/jvm", "java-([0-9]+)-.*".r, ""),
+    ("/Library/Java/JavaVirtualMachines", "jdk[1\\.]?([0-9]+)\\..*".r, "Contents/Home")
+  )
+
+  private[sbt] def discoverJavaHomes(): Initialize[Map[String, File]] = Def.setting {
+    JvmDirectories
+      .flatMap {
+        case (root, dirRegexp, inner) =>
+          Option(new File(root).list())
+            .getOrElse(Array.empty[String])
+            .toSeq
+            .map { s =>
+              println(s"found $s");
+              s
+            }
+            .collect {
+              case dir @ dirRegexp(ver) => ver -> Paths.get(root, dir, inner).toFile
+            }
+      }(breakOut)
   }
 
 }

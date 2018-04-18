@@ -270,6 +270,7 @@ object Keys {
   val connectInput = settingKey[Boolean]("If true, connects standard input when running a main class forked.").withRank(CSetting)
   val javaHome = settingKey[Option[File]]("Selects the Java installation used for compiling and forking.  If None, uses the Java installation running the build.").withRank(ASetting)
   val discoveredJavaHomes = settingKey[Map[String, File]]("Discovered JDK home directories on the system running the build")
+  val unmanagedJavaHomes = settingKey[Map[String, File]]("Additional JDK home directories")
   val javaOptions = taskKey[Seq[String]]("Options passed to a new JVM when forking.").withRank(BPlusTask)
   val envVars = taskKey[Map[String, String]]("Environment variables used when forking a new JVM").withRank(BTask)
 
