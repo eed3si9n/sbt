@@ -154,7 +154,7 @@ object Defaults extends BuildCommon {
       scalaHome :== None,
       apiURL := None,
       javaHome :== None,
-      discoveredJavaHomes := CrossJ.discoverJavaHomes().value,
+      discoveredJavaHomes := CrossJava.discoverJavaHomes().value,
       testForkedParallel :== false,
       javaOptions :== Nil,
       sbtPlugin :== false,

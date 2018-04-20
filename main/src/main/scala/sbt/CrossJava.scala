@@ -6,21 +6,21 @@ import java.nio.file.Paths
 import sbt.Def.Initialize
 import sbt.Def.{ ScopedKey, Setting }
 import sbt.Def.ScopedKey
-import sbt.Cross.{ crossVersions, switchScalaVersion, _ }
+import sbt.Cross._
 import sbt.Keys._
 import sbt.internal.Act
 import sbt.internal.CommandStrings.{
-  JavaHomeCrossCommand,
-  JavaHomeSwitchCommand,
-  crossHelp,
-  switchHelp
+  JavaCrossCommand,
+  JavaSwitchCommand,
+  javaCrossHelp,
+  javaSwitchHelp
 }
 import scala.collection.breakOut
 import sbt.internal.util.complete.DefaultParsers._
 import sbt.internal.util.AttributeKey
 import sbt.internal.util.complete.{ DefaultParsers, Parser }
 
-object CrossJ {
+object CrossJava {
 
   private case class JavaHome(home: File)
   private case class SwitchJavaHome(home: JavaHome)
@@ -35,12 +35,12 @@ object CrossJ {
         arg
       }
       val spacedVersion =
-        if (spacePresent) version else version & spacedFirst(JavaHomeSwitchCommand)
+        if (spacePresent) version else version & spacedFirst(JavaSwitchCommand)
 
       spacedVersion.map(v => SwitchJavaHome(JavaHome(new File(v))))
     }
 
-    token(JavaHomeSwitchCommand ~> OptSpace) flatMap { sp =>
+    token(JavaSwitchCommand ~> OptSpace) flatMap { sp =>
       versionAndCommand(sp.nonEmpty)
     }
   }
@@ -108,10 +108,10 @@ object CrossJ {
   }
 
   def switchJavaHome: Command =
-    Command.arb(requireSession(switchParser), switchHelp)(switchCommandImpl)
+    Command.arb(requireSession(switchParser), javaSwitchHelp)(switchCommandImpl)
 
   def crossJavaHome: Command =
-    Command.arb(requireSession(crossParser), crossHelp)(crossJavaHomeImpl)
+    Command.arb(requireSession(crossParser), javaCrossHelp)(crossJavaHomeCommandImpl)
 
   private case class CrossArgs(command: String, verbose: Boolean)
 
@@ -119,51 +119,23 @@ object CrossJ {
    * Parse the given command into either an aggregate command or a command for a project
    */
   private def crossParser(state: State): Parser[CrossArgs] =
-    token(JavaHomeCrossCommand <~ OptSpace) flatMap { _ =>
+    token(JavaCrossCommand <~ OptSpace) flatMap { _ =>
       (token(Parser.opt("-v" <~ Space)) ~ token(matched(state.combinedParser))).map {
         case (verbose, command) => CrossArgs(command, verbose.isDefined)
-      } & spacedFirst(JavaHomeCrossCommand)
+      } & spacedFirst(JavaCrossCommand)
     }
 
-  private def resolveAggregates(extracted: Extracted): Seq[ProjectRef] = {
-    import extracted._
-
-    def findAggregates(project: ProjectRef): List[ProjectRef] = {
-      project :: (structure.allProjects(project.build).find(_.id == project.project) match {
-        case Some(resolved) => resolved.aggregate.toList.flatMap(findAggregates)
-        case None           => Nil
-      })
-    }
-
-    (currentRef :: currentProject.aggregate.toList.flatMap(findAggregates)).distinct
-  }
-
-  private def parseCommand(command: String): Either[String, (String, String)] = {
-    import DefaultParsers._
-    val parser = (OpOrID <~ charClass(_ == '/', "/")) ~ any.* map {
-      case project ~ cmd => (project, cmd.mkString)
-    }
-    Parser.parse(command, parser).left.map(_ => command)
-  }
-
-  private def crossJavaHomeImpl(state: State, args: CrossArgs): State = {
+  private def crossJavaHomeCommandImpl(state: State, args: CrossArgs): State = {
     val x = Project.extract(state)
     import x._
 
     println(s"parsed out $args")
 
-    val (aggs, aggCommand) = parseCommand(args.command) match {
-      case Right((project, cmd)) =>
-        (structure.allProjectRefs.filter(_.project == project), cmd)
-      case Left(cmd) => (resolveAggregates(x), cmd)
-    }
-
-    println(s"(aggs, aggCommand) ($aggs, $aggCommand)")
-
+    val (aggs, aggCommand) = Cross.parseSlashCommand(x)(args.command)
     val projCrossVersions = aggs map { proj =>
       proj -> crossJavaHome(x, proj)
     }
-    // if we support scalaVersion, projVersions should be cached somewhere since
+    // if we support javaHome, projVersions should be cached somewhere since
     // running ++2.11.1 is at the root level is going to mess with the scalaVersion for the aggregated subproj
     val projVersions = (projCrossVersions flatMap {
       case (proj, versions) => versions map { proj.project -> _ }
@@ -186,12 +158,12 @@ object CrossJ {
           val distinctCrossConfigs = projCrossVersions.map(_._2.toSet).distinct
           if (validCommand && distinctCrossConfigs.size > 1) {
             state.log.warn(
-              "Issuing a cross building command, but not all sub projects have the same cross build " +
-                "configuration. This could result in subprojects cross building against Scala versions that they are " +
+              "Issuing a Java cross building command, but not all sub projects have the same cross build " +
+                "configuration. This could result in subprojects cross building against Java versions that they are " +
                 "not compatible with. Try issuing cross building command with tasks instead, since sbt will be able " +
-                "to ensure that cross building is only done using configured project and Scala version combinations " +
+                "to ensure that cross building is only done using configured project and Java version combinations " +
                 "that are configured.")
-            state.log.debug("Scala versions configuration is:")
+            state.log.debug("Java versions configuration is:")
             projCrossVersions.foreach {
               case (project, versions) => state.log.debug(s"$project: $versions")
             }
@@ -200,7 +172,7 @@ object CrossJ {
           // Execute using a blanket switch
           projCrossVersions.toMap.apply(currentRef).flatMap { version =>
             // Force scala version
-            Seq(s"$JavaHomeSwitchCommand $verbose $version!", aggCommand)
+            Seq(s"$JavaSwitchCommand $verbose $version!", aggCommand)
           }
 
         case Right(_) =>
@@ -210,15 +182,15 @@ object CrossJ {
           projVersions.groupBy(_._2).mapValues(_.map(_._1)).toSeq.flatMap {
             case (version, Seq(project)) =>
               // If only one project for a version, issue it directly
-              Seq(s"$JavaHomeSwitchCommand $verbose $version", s"$project/$aggCommand")
+              Seq(s"$JavaSwitchCommand $verbose $version", s"$project/$aggCommand")
             case (version, projects) if aggCommand.contains(" ") =>
               // If the command contains a space, then the `all` command won't work because it doesn't support issuing
               // commands with spaces, so revert to running the command on each project one at a time
-              s"$JavaHomeSwitchCommand $verbose $version" :: projects.map(project =>
+              s"$JavaSwitchCommand $verbose $version" :: projects.map(project =>
                 s"$project/$aggCommand")
             case (version, projects) =>
               // First switch scala version, then use the all command to run the command on each project concurrently
-              Seq(s"$JavaHomeSwitchCommand $verbose $version",
+              Seq(s"$JavaSwitchCommand $verbose $version",
                   projects.map(_ + "/" + aggCommand).mkString("all ", " ", ""))
           }
       }
@@ -233,22 +205,18 @@ object CrossJ {
     state.put(CapturedSession, extracted.session.rawAppend)
   }
 
-  final val JvmDirectories = Seq(
+  final val jvmDirectories = Seq(
     ("/usr/lib/jvm", "java-([0-9]+)-.*".r, ""),
     ("/Library/Java/JavaVirtualMachines", "jdk[1\\.]*([0-9]+)\\..*".r, "Contents/Home")
   )
 
   private[sbt] def discoverJavaHomes(): Initialize[Map[String, File]] = Def.setting {
-    JvmDirectories
+    jvmDirectories
       .flatMap {
         case (root, dirRegexp, inner) =>
           Option(new File(root).list())
             .getOrElse(Array.empty[String])
             .toSeq
-            .map { s =>
-              println(s"found $s");
-              s
-            }
             .collect {
               case dir @ dirRegexp(ver) => ver -> Paths.get(root, dir, inner).toFile
             }

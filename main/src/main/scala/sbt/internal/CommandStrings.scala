@@ -402,9 +402,35 @@ $SwitchCommand [<scala-version>=]<scala-home>[!] [-v] [<command>]
   Sets the `sbtVersion in pluginCrossBuild` of all projects to <sbt-version> and
   reloads the build. If <command> is provided, it is then executed.
 
-  See also `help $CrossCommand`
+  See also `help $PluginCrossCommand`
 """
 
-  val JavaHomeCrossCommand = "j"
-  val JavaHomeSwitchCommand = "jj"
+  val JavaCrossCommand = "java+"
+  val JavaSwitchCommand = "java++"
+
+  def javaCrossHelp: Help = Help.more(JavaCrossCommand, JavaCrossDetailed)
+  def javaSwitchHelp: Help = Help.more(JavaSwitchCommand, JavaSwitchDetailed)
+
+  def JavaCrossDetailed =
+    s"""$JavaCrossCommand <command>
+  Runs <command> for each JDK version specified for cross-JDK testing.
+
+  For each string in `crossJavaVersions` in the current project, this command sets the
+  `javaHome` of all projects to the corresponding Java home, reloads the build,
+  and executes <command>.  When finished, it reloads the build with the original
+  `javaHome`.
+  Note that `Test / fork := true` is needed for `javaHome` to be effective.
+
+  See also `help $JavaSwitchCommand`
+"""
+
+  def JavaSwitchDetailed =
+    s"""$JavaSwitchCommand <java-version>
+  Changes the JDK version and runs a command.
+
+  Sets the `javaHome` of all projects to <java-version> and
+  reloads the build. If <command> is provided, it is then executed.
+
+  See also `help $JavaSwitchCommand`
+"""
 }
