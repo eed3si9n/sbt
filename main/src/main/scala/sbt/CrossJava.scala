@@ -22,22 +22,41 @@ import sbt.internal.util.complete.{ DefaultParsers, Parser }
 
 object CrossJava {
 
-  private case class JavaHome(home: File)
-  private case class SwitchJavaHome(home: JavaHome)
+  private case class JavaHome(home: File, force: Boolean)
+  private case class SwitchJavaHome(home: JavaHome, verbose: Boolean, command: Option[String])
+  private val JDKVersion = """(\d{1,9})([\.\d{1,9}]?)""".r
 
   private def switchParser(state: State): Parser[SwitchJavaHome] = {
     import DefaultParsers._
     def versionAndCommand(spacePresent: Boolean) = {
       val x = Project.extract(state)
       import x._
-      val knownVersions = crossJavaHome(x, currentRef).map(_.getAbsolutePath)
-      val version = token(StringBasic.examples(knownVersions: _*)).map { arg =>
-        arg
+      val javaHomes = getJavaHomes(x, currentRef)
+      val knownVersions = javaHomes.keysIterator.toVector
+      val version: Parser[JavaHome] = token(StringBasic.examples(knownVersions: _*)).map { arg =>
+        val force = arg.endsWith("!")
+        val versionArg = if (force) arg.dropRight(1) else arg
+        versionArg match {
+          case JDKVersion(_, _) =>
+            javaHomes.get(versionArg) match {
+              case Some(dir) => JavaHome(dir, force)
+              case _         => javaHomeNotFound(versionArg)
+            }
+          case home if new File(home).exists =>
+            JavaHome(new File(home), force)
+          case _ =>
+            sys.error(s"Invalid Java version or home: $versionArg")
+        }
       }
       val spacedVersion =
-        if (spacePresent) version else version & spacedFirst(JavaSwitchCommand)
-
-      spacedVersion.map(v => SwitchJavaHome(JavaHome(new File(v))))
+        if (spacePresent) version
+        else version & spacedFirst(JavaSwitchCommand)
+      val verbose = Parser.opt(token(Space ~> "-v"))
+      val optionalCommand = Parser.opt(token(Space ~> matched(state.combinedParser)))
+      (spacedVersion ~ verbose ~ optionalCommand).map {
+        case v ~ verbose ~ command =>
+          SwitchJavaHome(v, verbose.isDefined, command)
+      }
     }
 
     token(JavaSwitchCommand ~> OptSpace) flatMap { sp =>
@@ -45,35 +64,47 @@ object CrossJava {
     }
   }
 
-  private def crossJavaHome(extracted: Extracted, proj: ResolvedReference): Seq[File] = {
+  private def getJavaHomes(extracted: Extracted, proj: ResolvedReference): Map[String, File] = {
     import extracted._
-    val discovered = (discoveredJavaHomes in proj get structure.data).get
+    (fullJavaHomes in proj get structure.data).get
+  }
 
-    (crossJavaVersions in proj get structure.data)
-      .map(_.map(discovered.get))
-      .getOrElse {
-        // reading scalaVersion is a one-time deal
-        (javaHome in proj get structure.data).toSeq
+  private def javaHomeNotFound(version: String): Nothing = {
+    sys.error(s"""Java home for JDK version $version was not found:
+                 |Use Global / unmanagedJavaHomes to set it manually.""".stripMargin)
+  }
+
+  private def getCrossJavaHomes(extracted: Extracted, proj: ResolvedReference): Seq[File] = {
+    import extracted._
+    val fjh = (fullJavaHomes in proj get structure.data).get
+    (crossJavaVersions in proj get structure.data) map { jvs =>
+      jvs map { jv =>
+        fjh.get(jv) match {
+          case Some(dir) => dir
+          case _         => javaHomeNotFound(jv)
+        }
       }
-      .flatten
+    } getOrElse Vector()
   }
 
+  /**
+   * Implements java++ command.
+   */
   private def switchCommandImpl(state: State, args: SwitchJavaHome): State = {
-    switchJavaHome(args, state)
-  }
-
-  private def switchJavaHome(switch: SwitchJavaHome, state: State): State = {
     val extracted = Project.extract(state)
     import extracted._
 
-    val projects: Seq[(ResolvedReference, Seq[File])] = {
-      structure.allProjectRefs.map(proj => proj -> crossJavaHome(extracted, proj))
+    def switchJavaHome(switch: SwitchJavaHome): State = {
+      val projects: Seq[(ResolvedReference, Seq[File])] = {
+        structure.allProjectRefs.map(proj => proj -> getCrossJavaHomes(extracted, proj))
+      }
+      setJavaHomeForProjects(switch.home.home, projects, state, extracted)
     }
-
-    setScalaVersionForProjects(switch.home.home, projects, state, extracted)
+    val switchedState = switchJavaHome(args)
+    args.command.toList ::: switchedState
   }
 
-  private def setScalaVersionForProjects(
+  private def setJavaHomeForProjects(
       home: File,
       projects: Seq[(ResolvedReference, Seq[File])],
       state: State,
@@ -133,7 +164,7 @@ object CrossJava {
 
     val (aggs, aggCommand) = Cross.parseSlashCommand(x)(args.command)
     val projCrossVersions = aggs map { proj =>
-      proj -> crossJavaHome(x, proj)
+      proj -> getCrossJavaHomes(x, proj)
     }
     // if we support javaHome, projVersions should be cached somewhere since
     // running ++2.11.1 is at the root level is going to mess with the scalaVersion for the aggregated subproj

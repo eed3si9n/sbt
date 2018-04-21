@@ -155,6 +155,8 @@ object Defaults extends BuildCommon {
       apiURL := None,
       javaHome :== None,
       discoveredJavaHomes := CrossJava.discoverJavaHomes().value,
+      unmanagedJavaHomes :== Map(),
+      fullJavaHomes := fullJavaHomesSetting.value,
       testForkedParallel :== false,
       javaOptions :== Nil,
       sbtPlugin :== false,
@@ -173,6 +175,20 @@ object Defaults extends BuildCommon {
       bgWaitFor := bgWaitForTask.evaluated,
       bgCopyClasspath :== true
     )
+
+  lazy val fullJavaHomesSetting = Def.setting {
+    val ds = (discoveredJavaHomes in Scope.Global).value
+    val us = (unmanagedJavaHomes in Scope.Global).value
+    // expand Java versions to 1.x
+    val oneDot = Map((1 to 8).toVector flatMap { i =>
+      Vector(s"$i" -> s"1.$i", s"1.$i" -> s"$i")
+    }: _*)
+    Map((ds.toVector ++ us.toVector) flatMap {
+      case (k, v) =>
+        if (oneDot.contains(k)) Vector(k -> v, oneDot(k) -> v)
+        else Vector(k -> v)
+    }: _*)
+  }
 
   private[sbt] lazy val globalIvyCore: Seq[Setting[_]] =
     Seq(

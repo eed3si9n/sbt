@@ -425,7 +425,7 @@ $SwitchCommand [<scala-version>=]<scala-home>[!] [-v] [<command>]
 """
 
   def JavaSwitchDetailed =
-    s"""$JavaSwitchCommand <java-version>
+    s"""$JavaSwitchCommand <java-version> [<command>]
   Changes the JDK version and runs a command.
 
   Sets the `javaHome` of all projects to <java-version> and
