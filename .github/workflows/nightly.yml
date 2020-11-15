@@ -58,5 +58,5 @@ jobs:
       env:
         BINTRAY_USER: ${{ secrets.BINTRAY_USER }}
         BINTRAY_PASS: ${{ secrets.BINTRAY_PASS }}
-        BINTRAY_REPOSITORY: maven-snapshot
+        BINTRAY_REPOSITORY: maven-snapshots
         BINTRAY_PACKAGE: sbt
