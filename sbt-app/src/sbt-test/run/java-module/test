@@ -1,0 +1,4 @@
+# #4328 reported referencing java.sql.Data causes SecurityException.
+# This reproduces the error.
+
+> run
