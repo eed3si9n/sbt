@@ -14,6 +14,7 @@ import java.util.Locale
 import Keys.{
   stateBuildStructure,
   bspEnabled,
+  cacheStores,
   colorShellPrompt,
   commands,
   historyPath,
@@ -51,7 +52,7 @@ import sbt.internal.util.Types.const // , idFun }
 import sbt.internal.util.complete.DefaultParsers
 import sbt.internal.server.ServerHandler
 import sbt.librarymanagement.Configuration
-import sbt.util.{ Show, Level }
+import sbt.util.{ ActionCacheStore, Show, Level }
 import sjsonnew.JsonFormat
 import scala.annotation.targetName
 import scala.concurrent.{ Await, TimeoutException }
@@ -319,6 +320,7 @@ trait ProjectExtra extends Scoped.Syntax:
       val connectionType: Option[ConnectionType] = get(serverConnectionType)
       val srvLogLevel: Option[Level.Value] = (ref / serverLog / logLevel).get(structure.data)
       val hs: Option[Seq[ServerHandler]] = get(ThisBuild / fullServerHandlers)
+      val caches: Option[Seq[ActionCacheStore]] = get(cacheStores)
       val commandDefs = allCommands.distinct.flatten[Command].map(_ tag (projectCommand, true))
       val newDefinedCommands = commandDefs ++ BasicCommands.removeTagged(
         s.definedCommands,
@@ -344,6 +346,7 @@ trait ProjectExtra extends Scoped.Syntax:
           .setCond(colorShellPrompt.key, newPrompt)
           .setCond(BasicKeys.serverLogLevel, srvLogLevel)
           .setCond(fullServerHandlers.key, hs)
+          .setCond(cacheStores.key, caches)
       s.copy(
         attributes = newAttrs,
         definedCommands = newDefinedCommands
