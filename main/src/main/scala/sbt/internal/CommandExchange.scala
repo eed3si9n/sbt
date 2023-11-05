@@ -197,10 +197,11 @@ private[sbt] final class CommandExchange {
     lazy val enableBsp = s.get(bspEnabled).getOrElse(true)
     lazy val portfile = s.baseDir / "project" / "target" / "active.json"
     lazy val caches = s.get(cacheStores).getOrElse(Nil)
+    lazy val outDir = s.get(rootOutputDirectory).getOrElse((s.baseDir / "target" / "out").toPath())
 
     // TODO: initialize somewhere else?
     RemoteCache.setActionCacheStore(AggregateActionCacheStore(caches))
-    RemoteCache.setOutputDirectory((s.baseDir / "target" / "out").toPath())
+    RemoteCache.setOutputDirectory(outDir)
 
     def onIncomingSocket(socket: Socket, instance: ServerInstance): Unit = {
       val name = newNetworkName

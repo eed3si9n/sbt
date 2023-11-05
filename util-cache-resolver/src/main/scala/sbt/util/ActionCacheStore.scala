@@ -190,7 +190,10 @@ class DiskActionCacheStore(base: Path) extends ActionCacheStore:
     refs.flatMap: r =>
       val casFile = casBase.toFile / r.contentHashStr
       if casFile.exists then
-        val outPath = outputDirectory.resolve(r.id)
+        val id =
+          if r.id.startsWith("${OUT}/") then r.id.drop(7)
+          else r.id
+        val outPath = outputDirectory.resolve(id)
         Files.createDirectories(outPath.getParent())
         if outPath.toFile().exists() then IO.delete(outPath.toFile())
         Some(Files.createSymbolicLink(outPath, casFile.toPath))
