@@ -1186,6 +1186,8 @@ lazy val sbtClientProj = (project in file("client"))
       outputDir.resolve("sbtn").toFile
     },
     nativeImageOptions ++= Seq(
+      "--static",
+      "--libc=musl",
       "--no-fallback",
       s"--initialize-at-run-time=sbt.client",
       // "The current machine does not support all of the following CPU features that are required by
