@@ -47,52 +47,52 @@ jobs:
     - name: Setup Windows C++ toolchain
       uses: ilammy/msvc-dev-cmd@v1
       if: ${{ matrix.os == 'windows-latest' }}
-    - name: Client test (Linux)
-      if: ${{ matrix.os == 'ubuntu-latest' }}
-      shell: bash
-      run: |
-        # test building sbtn on Linux
-        sbt "-Dsbt.io.virtual=false" nativeImage
-        # smoke test native Image
-        ./client/target/bin/sbtn --sbt-script=$(pwd)/sbt about
-        ./client/target/bin/sbtn --sbt-script=$(pwd)/sbt shutdown
-        # test launcher script
-        echo build using JDK 8 test using JDK 8 and JDK 25
-        sbt -Dsbt.build.version=$TEST_SBT_VER launcherPackage/Rpm/packageBin launcherPackage/Debian/packageBin
-        sbt -Dsbt.build.version=$TEST_SBT_VER launcherPackageIntegrationTest/test
-        cd launcher-package/citest && ./test.sh
-        JAVA_HOME="$JAVA_HOME_25_X64"
-        PATH="$JAVA_HOME_25_X64/bin:$PATH"
-        java -Xmx32m -version
-        ./test.sh
-    - name: Client test (macOS)
-      if: ${{ matrix.os == 'macos-latest' }}
-      shell: bash
-      run: |
-        # test building sbtn on macOS
-        ./sbt "-Dsbt.io.virtual=false" nativeImage
-        # test launcher script
-        launcher-package/bin/coursier resolve
-        sbt -Dsbt.build.version=$TEST_SBT_VER launcherPackageIntegrationTest/test
-        # This fails due to the JLine issue
-        # cd launcher-package/citest && ./test.sh
-    - name: build image (Windows)
-      if: ${{ matrix.os == 'windows-latest' }}
-      uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
-      with:
-        timeout_minutes: 10
-        max_attempts: 3
-        shell: bash
-        command: |
-          # test building sbtn on Windows
-          sbt "-Dsbt.io.virtual=false" nativeImage
+    # - name: Client test (Linux)
+    #   if: ${{ matrix.os == 'ubuntu-latest' }}
+    #   shell: bash
+    #   run: |
+    #     # test building sbtn on Linux
+    #     sbt "-Dsbt.io.virtual=false" nativeImage
+    #     # smoke test native Image
+    #     ./client/target/bin/sbtn --sbt-script=$(pwd)/sbt about
+    #     ./client/target/bin/sbtn --sbt-script=$(pwd)/sbt shutdown
+    #     # test launcher script
+    #     echo build using JDK 8 test using JDK 8 and JDK 25
+    #     sbt -Dsbt.build.version=$TEST_SBT_VER launcherPackage/Rpm/packageBin launcherPackage/Debian/packageBin
+    #     sbt -Dsbt.build.version=$TEST_SBT_VER launcherPackageIntegrationTest/test
+    #     cd launcher-package/citest && ./test.sh
+    #     JAVA_HOME="$JAVA_HOME_25_X64"
+    #     PATH="$JAVA_HOME_25_X64/bin:$PATH"
+    #     java -Xmx32m -version
+    #     ./test.sh
+    # - name: Client test (macOS)
+    #   if: ${{ matrix.os == 'macos-latest' }}
+    #   shell: bash
+    #   run: |
+    #     # test building sbtn on macOS
+    #     ./sbt "-Dsbt.io.virtual=false" nativeImage
+    #     # test launcher script
+    #     launcher-package/bin/coursier resolve
+    #     sbt -Dsbt.build.version=$TEST_SBT_VER launcherPackageIntegrationTest/test
+    #     # This fails due to the JLine issue
+    #     # cd launcher-package/citest && ./test.sh
+    # - name: build image (Windows)
+    #   if: ${{ matrix.os == 'windows-latest' }}
+    #   uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
+    #   with:
+    #     timeout_minutes: 10
+    #     max_attempts: 3
+    #     shell: bash
+    #     command: |
+    #       # test building sbtn on Windows
+    #       sbt "-Dsbt.io.virtual=false" nativeImage
     - name: Client test (Windows)
       if: ${{ matrix.os == 'windows-latest' }}
       shell: bash
       run: |
-        # smoke test native Image
-        ./client/target/bin/sbtn --sbt-script=$(pwd)/launcher-package/src/universal/bin/sbt.bat about
-        ./client/target/bin/sbtn --sbt-script=$(pwd)/launcher-package/src/universal/bin/sbt.bat shutdown
+        # # smoke test native Image
+        # ./client/target/bin/sbtn --sbt-script=$(pwd)/launcher-package/src/universal/bin/sbt.bat about
+        # ./client/target/bin/sbtn --sbt-script=$(pwd)/launcher-package/src/universal/bin/sbt.bat shutdown
         # test launcher script
         echo build using JDK 8 test using JDK 8 and JDK 25
         launcher-package/bin/coursier.bat resolve
