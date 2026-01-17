@@ -147,15 +147,18 @@ if defined SBT_NATIVE_CLIENT (
   )
 )
 
-:args_loop
-shift
+set "args_raw=%*"
 
-if "%~0" == "" goto args_end
-set g=%~0
+:args_loop
+call :next_arg
+if not defined arg_raw goto args_end
+set "cur_arg_raw=!arg_raw!"
+set "cur_arg=!arg!"
+set "g=!cur_arg!"
 
 rem make sure the sbt_args_debug gets set first incase any argument parsing uses :dlog
-if "%~0" == "-d" set _debug_arg=true
-if "%~0" == "--debug" set _debug_arg=true
+if "!cur_arg!" == "-d" set _debug_arg=true
+if "!cur_arg!" == "--debug" set _debug_arg=true
 
 if defined _debug_arg (
   set _debug_arg=
@@ -164,13 +167,13 @@ if defined _debug_arg (
   goto args_loop
 )
 
-if "%~0" == "-h" goto usage
-if "%~0" == "-help" goto usage
-if "%~0" == "--help" goto usage
+if "!cur_arg!" == "-h" goto usage
+if "!cur_arg!" == "-help" goto usage
+if "!cur_arg!" == "--help" goto usage
 
-if "%~0" == "-v" set _verbose_arg=true
-if "%~0" == "-verbose" set _verbose_arg=true
-if "%~0" == "--verbose" set _verbose_arg=true
+if "!cur_arg!" == "-v" set _verbose_arg=true
+if "!cur_arg!" == "-verbose" set _verbose_arg=true
+if "!cur_arg!" == "--verbose" set _verbose_arg=true
 
 if defined _verbose_arg (
   set _verbose_arg=
@@ -178,9 +181,9 @@ if defined _verbose_arg (
   goto args_loop
 )
 
-if "%~0" == "-V" set _version_arg=true
-if "%~0" == "-version" set _version_arg=true
-if "%~0" == "--version" set _version_arg=true
+if "!cur_arg!" == "-V" set _version_arg=true
+if "!cur_arg!" == "-version" set _version_arg=true
+if "!cur_arg!" == "--version" set _version_arg=true
 
 if defined _version_arg (
   set _version_arg=
@@ -188,7 +191,7 @@ if defined _version_arg (
   goto args_loop
 )
 
-if "%~0" == "--client" set _client_arg=true
+if "!cur_arg!" == "--client" set _client_arg=true
 
 if defined _client_arg (
   set _client_arg=
@@ -196,7 +199,7 @@ if defined _client_arg (
   goto args_loop
 )
 
-if "%~0" == "--jvm-client" set _jvm_client_arg=true
+if "!cur_arg!" == "--jvm-client" set _jvm_client_arg=true
 
 if defined _jvm_client_arg (
   set _jvm_client_arg=
@@ -205,8 +208,8 @@ if defined _jvm_client_arg (
   goto args_loop
 )
 
-if "%~0" == "-batch" set _batch_arg=true
-if "%~0" == "--batch" set _batch_arg=true
+if "!cur_arg!" == "-batch" set _batch_arg=true
+if "!cur_arg!" == "--batch" set _batch_arg=true
 
 if defined _batch_arg (
   set _batch_arg=
@@ -214,8 +217,8 @@ if defined _batch_arg (
   goto args_loop
 )
 
-if "%~0" == "-no-colors" set _no_colors_arg=true
-if "%~0" == "--no-colors" set _no_colors_arg=true
+if "!cur_arg!" == "-no-colors" set _no_colors_arg=true
+if "!cur_arg!" == "--no-colors" set _no_colors_arg=true
 
 if defined _no_colors_arg (
   set _no_colors_arg=
@@ -223,8 +226,8 @@ if defined _no_colors_arg (
   goto args_loop
 )
 
-if "%~0" == "-no-server" set _no_server_arg=true
-if "%~0" == "--no-server" set _no_server_arg=true
+if "!cur_arg!" == "-no-server" set _no_server_arg=true
+if "!cur_arg!" == "--no-server" set _no_server_arg=true
 
 if defined _no_server_arg (
   set _no_server_arg=
@@ -232,7 +235,7 @@ if defined _no_server_arg (
   goto args_loop
 )
 
-if "%~0" == "--no-hide-jdk-warnings" set _no_hide_jdk_warnings=true
+if "!cur_arg!" == "--no-hide-jdk-warnings" set _no_hide_jdk_warnings=true
 
 if defined _no_hide_jdk_warnings (
   set _no_hide_jdk_warnings=
@@ -240,8 +243,8 @@ if defined _no_hide_jdk_warnings (
   goto args_loop
 )
 
-if "%~0" == "-no-global" set _no_global_arg=true
-if "%~0" == "--no-global" set _no_global_arg=true
+if "!cur_arg!" == "-no-global" set _no_global_arg=true
+if "!cur_arg!" == "--no-global" set _no_global_arg=true
 
 if defined _no_global_arg (
   set _no_global_arg=
@@ -249,8 +252,8 @@ if defined _no_global_arg (
   goto args_loop
 )
 
-if "%~0" == "-traces" set _traces_arg=true
-if "%~0" == "--traces" set _traces_arg=true
+if "!cur_arg!" == "-traces" set _traces_arg=true
+if "!cur_arg!" == "--traces" set _traces_arg=true
 
 if defined _traces_arg (
   set _traces_arg=
@@ -258,10 +261,10 @@ if defined _traces_arg (
   goto args_loop
 )
 
-if "%~0" == "-sbt-create" set _allow_empty_arg=true
-if "%~0" == "--sbt-create" set _allow_empty_arg=true
-if "%~0" == "-allow-empty" set _allow_empty_arg=true
-if "%~0" == "--allow-empty" set _allow_empty_arg=true
+if "!cur_arg!" == "-sbt-create" set _allow_empty_arg=true
+if "!cur_arg!" == "--sbt-create" set _allow_empty_arg=true
+if "!cur_arg!" == "-allow-empty" set _allow_empty_arg=true
+if "!cur_arg!" == "--allow-empty" set _allow_empty_arg=true
 
 if defined _allow_empty_arg (
   set _allow_empty_arg=
@@ -269,88 +272,87 @@ if defined _allow_empty_arg (
   goto args_loop
 )
 
-if "%~0" == "-sbt-dir" set _sbt_dir_arg=true
-if "%~0" == "--sbt-dir" set _sbt_dir_arg=true
+if "!cur_arg!" == "-sbt-dir" set _sbt_dir_arg=true
+if "!cur_arg!" == "--sbt-dir" set _sbt_dir_arg=true
 
 if defined _sbt_dir_arg (
  set _sbt_dir_arg=
- if not "%~1" == "" (
-   set sbt_args_sbt_dir=%1
-   shift
-   goto args_loop
- ) else (
-   echo "%~0" is missing a value
+ call :next_arg
+ if not defined arg_raw (
+   echo "!cur_arg!" is missing a value
    goto error
+ ) else (
+   set "sbt_args_sbt_dir=!arg!"
+   goto args_loop
  )
 )
 
-if "%~0" == "-sbt-boot" set _sbt_boot_arg=true
-if "%~0" == "--sbt-boot" set _sbt_boot_arg=true
+if "!cur_arg!" == "-sbt-boot" set _sbt_boot_arg=true
+if "!cur_arg!" == "--sbt-boot" set _sbt_boot_arg=true
 
 if defined _sbt_boot_arg (
  set _sbt_boot_arg=
- if not "%~1" == "" (
-   set sbt_args_sbt_boot=%1
-   shift
-   goto args_loop
- ) else (
-   echo "%~0" is missing a value
+ call :next_arg
+ if not defined arg_raw (
+   echo "!cur_arg!" is missing a value
    goto error
+ ) else (
+   set "sbt_args_sbt_boot=!arg!"
+   goto args_loop
  )
 )
 
-if "%~0" == "-sbt-cache" set _sbt_cache_arg=true
-if "%~0" == "--sbt-cache" set _sbt_cache_arg=true
+if "!cur_arg!" == "-sbt-cache" set _sbt_cache_arg=true
+if "!cur_arg!" == "--sbt-cache" set _sbt_cache_arg=true
 
 if defined _sbt_cache_arg (
  set _sbt_cache_arg=
- if not "%~1" == "" (
-   set sbt_args_sbt_cache=%1
-   shift
-   goto args_loop
- ) else (
-   echo "%~0" is missing a value
+ call :next_arg
+ if not defined arg_raw (
+   echo "!cur_arg!" is missing a value
    goto error
+ ) else (
+   set "sbt_args_sbt_cache=!arg!"
+   goto args_loop
  )
 )
 
-if "%~0" == "-sbt-jar" set _sbt_jar=true
-if "%~0" == "--sbt-jar" set _sbt_jar=true
+if "!cur_arg!" == "-sbt-jar" set _sbt_jar=true
+if "!cur_arg!" == "--sbt-jar" set _sbt_jar=true
 
 if defined _sbt_jar (
  set _sbt_jar=
- if not "%~1" == "" (
-   if exist "%~1" (
-     set sbt_args_sbt_jar=%1
-     shift
-     goto args_loop
-   ) else (
-      echo %~1 does not exist
-      goto error
-   )
- ) else (
-   echo "%~0" is missing a value
+ call :next_arg
+ if not defined arg_raw (
+   echo "!cur_arg!" is missing a value
    goto error
+ )
+ if exist "!arg!" (
+   set "sbt_args_sbt_jar=!arg_raw!"
+   goto args_loop
+ ) else (
+    echo !arg! does not exist
+    goto error
  )
 )
 
-if "%~0" == "-ivy" set _sbt_ivy_arg=true
-if "%~0" == "--ivy" set _sbt_ivy_arg=true
+if "!cur_arg!" == "-ivy" set _sbt_ivy_arg=true
+if "!cur_arg!" == "--ivy" set _sbt_ivy_arg=true
 
 if defined _sbt_ivy_arg (
  set _sbt_ivy_arg=
- if not "%~1" == "" (
-   set sbt_args_ivy=%1
-   shift
-   goto args_loop
- ) else (
-   echo "%~0" is missing a value
+ call :next_arg
+ if not defined arg_raw (
+   echo "!cur_arg!" is missing a value
    goto error
+ ) else (
+   set "sbt_args_ivy=!arg!"
+   goto args_loop
  )
 )
 
-if "%~0" == "-debug-inc" set _debug_inc_arg=true
-if "%~0" == "--debug-inc" set _debug_inc_arg=true
+if "!cur_arg!" == "-debug-inc" set _debug_inc_arg=true
+if "!cur_arg!" == "--debug-inc" set _debug_inc_arg=true
 
 if defined _debug_inc_arg (
   set _debug_inc_arg=
@@ -358,69 +360,68 @@ if defined _debug_inc_arg (
   goto args_loop
 )
 
-if "%~0" == "--sbt-version" set _sbt_version_arg=true
-if "%~0" == "-sbt-version" set _sbt_version_arg=true
+if "!cur_arg!" == "--sbt-version" set _sbt_version_arg=true
+if "!cur_arg!" == "-sbt-version" set _sbt_version_arg=true
 
 if defined _sbt_version_arg (
  set _sbt_version_arg=
- if not "%~1" == "" (
-   set sbt_args_sbt_version=%~1
-   shift
-   goto args_loop
- ) else (
-   echo "%~0" is missing a value
+ call :next_arg
+ if not defined arg_raw (
+   echo "!cur_arg!" is missing a value
    goto error
+ ) else (
+   set "sbt_args_sbt_version=!arg!"
+   goto args_loop
  )
 )
 
-if "%~0" == "--mem" set _sbt_mem_arg=true
-if "%~0" == "-mem" set _sbt_mem_arg=true
+if "!cur_arg!" == "--mem" set _sbt_mem_arg=true
+if "!cur_arg!" == "-mem" set _sbt_mem_arg=true
 
 if defined _sbt_mem_arg (
  set _sbt_mem_arg=
- if not "%~1" == "" (
-   set sbt_args_mem=%~1
-   shift
-   goto args_loop
- ) else (
-   echo "%~0" is missing a value
+ call :next_arg
+ if not defined arg_raw (
+   echo "!cur_arg!" is missing a value
    goto error
+ ) else (
+   set "sbt_args_mem=!arg!"
+   goto args_loop
  )
 )
 
-if "%~0" == "--supershell" set _supershell_arg=true
-if "%~0" == "-supershell" set _supershell_arg=true
+if "!cur_arg!" == "--supershell" set _supershell_arg=true
+if "!cur_arg!" == "-supershell" set _supershell_arg=true
 
 if defined _supershell_arg (
  set _supershell_arg=
- if not "%~1" == "" (
-   set sbt_args_supershell=%~1
-   shift
-   goto args_loop
- ) else (
-   echo "%~0" is missing a value
+ call :next_arg
+ if not defined arg_raw (
+   echo "!cur_arg!" is missing a value
    goto error
+ ) else (
+   set "sbt_args_supershell=!arg!"
+   goto args_loop
  )
 )
 
-if "%~0" == "--color" set _color_arg=true
-if "%~0" == "-color" set _color_arg=true
+if "!cur_arg!" == "--color" set _color_arg=true
+if "!cur_arg!" == "-color" set _color_arg=true
 
 if defined _color_arg (
   set _color_arg=
-  if not "%~1" == "" (
-   set sbt_args_color=%~1
-   shift
-   goto args_loop
-  ) else (
-   echo "%~0" is missing a value
+  call :next_arg
+  if not defined arg_raw (
+   echo "!cur_arg!" is missing a value
    goto error
+  ) else (
+   set "sbt_args_color=!arg!"
+   goto args_loop
   )
-  goto args_loop
 )
 
-if "%~0" == "--no-share" set _no_share_arg=true
-if "%~0" == "-no-share" set _no_share_arg=true
+if "!cur_arg!" == "--no-share" set _no_share_arg=true
+if "!cur_arg!" == "-no-share" set _no_share_arg=true
 
 if defined _no_share_arg (
   set _no_share_arg=
@@ -428,8 +429,8 @@ if defined _no_share_arg (
   goto args_loop
 )
 
-if "%~0" == "--timings" set _timings_arg=true
-if "%~0" == "-timings" set _timings_arg=true
+if "!cur_arg!" == "--timings" set _timings_arg=true
+if "!cur_arg!" == "-timings" set _timings_arg=true
 
 if defined _timings_arg (
   set _timings_arg=
@@ -437,136 +438,172 @@ if defined _timings_arg (
   goto args_loop
 )
 
-if "%~0" == "shutdownall" (
+if "!cur_arg!" == "shutdownall" (
   set shutdownall=1
   goto args_loop
 )
 
-if "%~0" == "--script-version" (
+if "!cur_arg!" == "--script-version" (
   set sbt_args_print_sbt_script_version=1
   goto args_loop
 )
 
-if "%~0" == "--numeric-version" (
+if "!cur_arg!" == "--numeric-version" (
   set sbt_args_print_sbt_version=1
   goto args_loop
 )
 
-if "%~0" == "-jvm-debug" set _jvm_debug_arg=true
-if "%~0" == "--jvm-debug" set _jvm_debug_arg=true
+if "!cur_arg!" == "-jvm-debug" set _jvm_debug_arg=true
+if "!cur_arg!" == "--jvm-debug" set _jvm_debug_arg=true
 
 if defined _jvm_debug_arg (
   set _jvm_debug_arg=
-  if not "%~1" == "" (
-    set /a JVM_DEBUG_PORT=%~1 2>nul >nul
-    if !JVM_DEBUG_PORT! EQU 0 (
-      rem next argument wasn't a port, set a default and process next arg
-      set /A JVM_DEBUG_PORT=5005
-      goto args_loop
-    ) else (
-      shift
-      goto args_loop
-    )
+  call :next_arg
+  if not defined arg_raw (
+    goto args_loop
+  )
+  set /a JVM_DEBUG_PORT=!arg! 2>nul >nul
+  if !JVM_DEBUG_PORT! EQU 0 (
+    rem next argument wasn't a port, set a default and process next arg
+    set /A JVM_DEBUG_PORT=5005
+    goto args_loop
+   ) else (
+    goto args_loop
   )
 )
 
-if "%~0" == "-java-home" set _java_home_arg=true
-if "%~0" == "--java-home" set _java_home_arg=true
+if "!cur_arg!" == "-java-home" set _java_home_arg=true
+if "!cur_arg!" == "--java-home" set _java_home_arg=true
 
 if defined _java_home_arg (
   set _java_home_arg=
-  if not "%~1" == "" (
-    if exist "%~1\bin\java.exe" (
-      set "_JAVACMD=%~1\bin\java.exe"
-      set "JAVA_HOME=%~1"
-      set "JDK_HOME=%~1"
-      shift
-      goto args_loop
-    ) else (
-      echo Directory "%~1" for JAVA_HOME is not valid
-      goto error
-    )
-  ) else (
+  call :next_arg
+  if not defined arg_raw (
     echo Second argument for --java-home missing
     goto error
   )
-)
+  if exist "!arg!\bin\java.exe" (
+    set "_JAVACMD=!arg!\bin\java.exe"
+    set "JAVA_HOME=!arg!"
+    set "JDK_HOME=!arg!"
+    goto args_loop
+  ) else (
+    echo Directory "!arg!" for JAVA_HOME is not valid
+    goto error
+   )
+) 
 
-if "%~0" == "new" (
+if "!cur_arg!" == "new" (
   if not defined SBT_ARGS (
     set sbt_new=true
   )
 )
-if "%~0" == "init" (
+if "!cur_arg!" == "init" (
   if not defined SBT_ARGS (
     set sbt_new=true
   )
 )
 
-if "%g:~0,2%" == "-D" (
+if "!g:~0,2!" == "-D" (
   rem special handling for -D since '=' gets parsed away
-  for /F "tokens=1 delims==" %%a in ("%g%") do (
+  for /F "tokens=1 delims==" %%a in ("!g!") do (
     rem make sure it doesn't have the '=' already
-    if "%g%" == "%%a" (
-      if not "%~1" == "" (
-        call :dlog [args_loop] -D argument %~0=%~1
-        set "SBT_ARGS=!SBT_ARGS! %~0=%~1"
-        shift
-        goto args_loop
-      ) else (
-        echo %g% is missing a value
+    if "!g!" == "%%a" (
+      call :next_arg
+      if not defined arg_raw (
+        echo !g! is missing a value
         goto error
       )
+      call :dlog [args_loop] -D argument !cur_arg_raw!=!arg_raw!
+      set "SBT_ARGS=!SBT_ARGS! !cur_arg_raw!=!arg_raw!"
+      goto args_loop
     ) else (
-      call :dlog [args_loop] -D argument %~0
-      set "SBT_ARGS=!SBT_ARGS! %~0"
+      call :dlog [args_loop] -D argument !cur_arg_raw!
+      set "SBT_ARGS=!SBT_ARGS! !cur_arg_raw!"
       goto args_loop
     )
   )
 )
 
-if not "%g:~0,5%" == "-XX:+" if not "%g:~0,5%" == "-XX:-" if "%g:~0,3%" == "-XX" (
+if not "!g:~0,5!" == "-XX:+" if not "!g:~0,5!" == "-XX:-" if "!g:~0,3!" == "-XX" (
   rem special handling for -XX since '=' gets parsed away
-  for /F "tokens=1 delims==" %%a in ("%g%") do (
+  for /F "tokens=1 delims==" %%a in ("!g!") do (
     rem make sure it doesn't have the '=' already
-    if "%g%" == "%%a" (
-      if not "%~1" == "" (
-        call :dlog [args_loop] -XX argument %~0=%~1
-        set "SBT_ARGS=!SBT_ARGS! %~0=%~1"
-        shift
-        goto args_loop
-      ) else (
-        echo %g% is missing a value
+    if "!g!" == "%%a" (
+      call :next_arg
+      if not defined arg_raw (
+        echo !g! is missing a value
         goto error
       )
+      call :dlog [args_loop] -XX argument !cur_arg_raw!=!arg_raw!
+      set "SBT_ARGS=!SBT_ARGS! !cur_arg_raw!=!arg_raw!"
+      goto args_loop
     ) else (
-      call :dlog [args_loop] -XX argument %~0
-      set "SBT_ARGS=!SBT_ARGS! %~0"
+      call :dlog [args_loop] -XX argument !cur_arg_raw!
+      set "SBT_ARGS=!SBT_ARGS! !cur_arg_raw!"
       goto args_loop
     )
   )
 )
 
-if defined sbt_new if "%g:~0,2%" == "--" (
+if defined sbt_new if "!g:~0,2!" == "--" (
   rem special handling for -- template arguments since '=' gets parsed away on Windows
-  for /F "tokens=1 delims==" %%a in ("%g%") do (
+  for /F "tokens=1 delims==" %%a in ("!g!") do (
     rem make sure it doesn't have the '=' already
-    if "%g%" == "%%a" (
-      if not "%~1" == "" (
-        call :dlog [args_loop] -- argument %~0=%~1
-        set "SBT_ARGS=!SBT_ARGS! %~0=%~1"
-        shift
+    if "!g!" == "%%a" (
+      call :next_arg
+      if defined arg_raw (
+        call :dlog [args_loop] -- argument !cur_arg_raw!=!arg_raw!
+        set "SBT_ARGS=!SBT_ARGS! !cur_arg_raw!=!arg_raw!"
         goto args_loop
       )
     )
   )
 )
 
-rem the %0 (instead of %~0) preserves original argument quoting
-set SBT_ARGS=!SBT_ARGS! %0
+rem preserve original argument quoting
+set "SBT_ARGS=!SBT_ARGS! !cur_arg_raw!"
 
 goto args_loop
+
 :args_end
+goto after_args_end
+
+:next_arg
+set "arg_raw="
+set "arg="
+set "in_quotes="
+:next_arg_trim
+if "!args_raw!" == "" exit /b 0
+if "!args_raw:~0,1!" == " " (
+  set "args_raw=!args_raw:~1!"
+  goto next_arg_trim
+)
+:next_arg_read
+if "!args_raw!" == "" goto next_arg_done
+set "ch=!args_raw:~0,1!"
+set "args_raw=!args_raw:~1!"
+if "!ch!" == "\"" (
+  if defined in_quotes (
+    set "in_quotes="
+  ) else (
+    set "in_quotes=1"
+  )
+  set "arg_raw=!arg_raw!!ch!"
+  goto next_arg_read
+)
+if not defined in_quotes if "!ch!" == " " goto next_arg_done
+set "arg_raw=!arg_raw!!ch!"
+goto next_arg_read
+:next_arg_done
+if not defined arg_raw exit /b 0
+set "arg=!arg_raw!"
+if "!arg:~0,1!" == "\"" if "!arg:~-1!" == "\"" (
+  set "arg=!arg:~1,-1!"
+)
+exit /b 0
+
+:after_args_end
 
 if exist build.sbt (
   set is_this_dir_sbt=1
