@@ -20,6 +20,10 @@ jobs:
             java: 17
             distribution: zulu
             jobtype: 2
+          - os: windows-latest
+            java: 17
+            distribution: zulu
+            jobtype: 2
           - os: ubuntu-latest
             java: 25
             distribution: zulu
