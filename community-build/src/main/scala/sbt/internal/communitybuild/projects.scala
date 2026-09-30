@@ -232,7 +232,7 @@ final case class SbtCommunityProject(
     scenarioType: Scenario = Scenario.Test,
     override val environment: Map[String, String] = Map.empty,
 ) extends CommunityProject:
-  override val binaryName: String = "sbt"
+  override val binaryName: String = if scala.util.Properties.isWin then "sbt.bat" else "sbt"
 
   private def scalacOptionsString: String =
     scalacOptions.map("\"" + _ + "\"").mkString("List(", ",", ")")
