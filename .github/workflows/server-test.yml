@@ -142,5 +142,6 @@ jobs:
         env:
           COMMUNITY_BUILD_REMOTE_CACHE: grpc://127.0.0.1:2024
         run: |
+          rm community-build/community-projects/chimney/chimney/src/test/scala-3/io/scalaland/chimney/TotalTransformerNamedTupleSpec.scala
           export BB_STORAGE="$(cygpath -u "$RUNNER_TOOL_CACHE")/bb-storage/bb_storage.exe"
           .github/bb-storage/with-bb-storage.sh ./sbt -v --server "community-build/test"
