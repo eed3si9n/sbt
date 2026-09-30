@@ -130,51 +130,17 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TOOL_CACHE/bb-storage"
           curl -sfL -o "$RUNNER_TOOL_CACHE/bb-storage/bb_storage.exe" "https://github.com/buildbarn/bb-storage/releases/download/${BB_STORAGE_VERSION}/bb_storage.windows_amd64.exe"
-      - name: Start bb-storage
-        shell: pwsh
-        run: |
-          $p = Start-Process -PassThru -NoNewWindow `
-            -FilePath "$env:RUNNER_TOOL_CACHE\bb-storage\bb_storage.exe" `
-            -ArgumentList ".github\bb-storage\storage.jsonnet" `
-            -RedirectStandardOutput "$env:RUNNER_TEMP\bb-storage.out.log" `
-            -RedirectStandardError "$env:RUNNER_TEMP\bb-storage.err.log"
-          $p.Id | Out-File "$env:RUNNER_TEMP\bb-storage.pid"
-          for ($i = 0; $i -lt 30; $i++) {
-            try {
-              Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8000/-/healthy | Out-Null
-              exit 0
-            } catch {
-              Start-Sleep -Seconds 1
-            }
-          }
-          Write-Host "bb-storage did not start in time"
-          Get-Content "$env:RUNNER_TEMP\bb-storage.out.log", "$env:RUNNER_TEMP\bb-storage.err.log"
-          exit 1
       - name: Remote cache scripted test
         if: ${{ matrix.jobtype == 1 }}
         shell: bash
-        run: ./sbt -v --server "scripted remote-cache/*"
+        run: |
+          export BB_STORAGE="$(cygpath -u "$RUNNER_TOOL_CACHE")/bb-storage/bb_storage.exe"
+          .github/bb-storage/with-bb-storage.sh ./sbt -v --server "scripted remote-cache/*"
       - name: Community build
         if: ${{ matrix.jobtype == 2 }}
         shell: bash
         env:
           COMMUNITY_BUILD_REMOTE_CACHE: grpc://127.0.0.1:2024
-        run: ./sbt -v --server "community-build/test"
-      - name: bb-storage gRPC metrics
-        if: always()
-        shell: pwsh
         run: |
-          (Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8000/metrics).Content -split "`n" |
-            Select-String '^grpc_server_handled_total' |
-            Where-Object { $_ -notmatch ' 0$' }
-      - name: bb-storage log
-        if: failure()
-        shell: pwsh
-        run: Get-Content "$env:RUNNER_TEMP\bb-storage.out.log", "$env:RUNNER_TEMP\bb-storage.err.log"
-      - name: Stop bb-storage
-        if: always()
-        shell: pwsh
-        run: |
-          if (Test-Path "$env:RUNNER_TEMP\bb-storage.pid") {
-            Stop-Process -Id (Get-Content "$env:RUNNER_TEMP\bb-storage.pid") -ErrorAction SilentlyContinue
-          }
+          export BB_STORAGE="$(cygpath -u "$RUNNER_TOOL_CACHE")/bb-storage/bb_storage.exe"
+          .github/bb-storage/with-bb-storage.sh ./sbt -v --server "community-build/test"
