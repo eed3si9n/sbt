@@ -24,6 +24,7 @@ local localBackend(blockSizeBytes, keyEntries, newBlocks) = {
         listenAddresses: ['127.0.0.1:8000'],
         authenticationPolicy: { allow: {} },
       }],
+      enablePrometheus: true,
     },
   },
   contentAddressableStorage: {

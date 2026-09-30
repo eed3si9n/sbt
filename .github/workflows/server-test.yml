@@ -160,6 +160,13 @@ jobs:
         env:
           COMMUNITY_BUILD_REMOTE_CACHE: grpc://127.0.0.1:2024
         run: ./sbt -v --server "community-build/test"
+      - name: bb-storage gRPC metrics
+        if: always()
+        shell: pwsh
+        run: |
+          (Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8000/metrics).Content -split "`n" |
+            Select-String '^grpc_server_handled_total' |
+            Where-Object { $_ -notmatch ' 0$' }
       - name: bb-storage log
         if: failure()
         shell: pwsh
