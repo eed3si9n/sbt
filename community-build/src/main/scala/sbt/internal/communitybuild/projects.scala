@@ -9,6 +9,8 @@ import java.nio.charset.StandardCharsets.UTF_8
 import scala.io.Source
 import scala.util.Using
 
+val isWindows: Boolean = scala.util.Properties.isWin
+
 lazy val communitybuildDir: Path =
   Paths.get(sys.props("user.dir")).resolve("community-build")
 
@@ -201,7 +203,7 @@ sealed trait CommunityProject:
         summaries.add(line)
     )
     val commandEnd = System.nanoTime()
-    exec(projectDir, binaryName, baseArgs :+ "shutdown", environment)
+    if !isWindows then exec(projectDir, binaryName, baseArgs :+ "shutdown", environment)
     val shutdownEnd = System.nanoTime()
     val wallClockSeconds = (commandEnd - start) / 1e9
     log(
@@ -232,7 +234,9 @@ final case class SbtCommunityProject(
     scenarioType: Scenario = Scenario.Test,
     override val environment: Map[String, String] = Map.empty,
 ) extends CommunityProject:
-  override val binaryName: String = if scala.util.Properties.isWin then "sbt.bat" else "sbt"
+  override val binaryName: String = if isWindows then "sbt.bat" else "sbt"
+
+  private val launcherArgs: List[String] = if isWindows then List("--server") else Nil
 
   private def scalacOptionsString: String =
     scalacOptions.map("\"" + _ + "\"").mkString("List(", ",", ")")
@@ -273,7 +277,7 @@ final case class SbtCommunityProject(
     case _             => Nil
 
   override val sbt1CommandsArgs: List[String] =
-    extraSbtArgs ++ sbtProps ++ List(
+    launcherArgs ++ extraSbtArgs ++ sbtProps ++ List(
       s"-Dsbt.global.plugins=$sbt1PluginDir",
       s"-Dsbt.version=$sbt1Version",
       s"-Dsbt.boot=$bootDir",
@@ -289,7 +293,7 @@ final case class SbtCommunityProject(
         s"-Dsbt.remote_cache=$uri",
       )
     )
-    extraSbtArgs ++ sbtProps ++ remoteCacheProps ++ List(
+    launcherArgs ++ extraSbtArgs ++ sbtProps ++ remoteCacheProps ++ List(
       s"-Dsbt.version=$sbtVersion",
       s"-Dsbt.boot=$bootDir",
       s"-Dsbt.global.localcache=$localCacheDir",

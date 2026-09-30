@@ -153,16 +153,13 @@ jobs:
       - name: Remote cache scripted test
         if: ${{ matrix.jobtype == 1 }}
         shell: bash
-        run: |
-          sbt -v --client "doc; publishLocal"
-          sbt -v --client "scripted remote-cache/*"
+        run: ./sbt -v --server "scripted remote-cache/*"
       - name: Community build
         if: ${{ matrix.jobtype == 2 }}
         shell: bash
         env:
           COMMUNITY_BUILD_REMOTE_CACHE: grpc://127.0.0.1:2024
-        run: |
-          sbt -v --client "community-build/test"
+        run: ./sbt -v --server "community-build/test"
       - name: bb-storage log
         if: failure()
         shell: pwsh
