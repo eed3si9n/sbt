@@ -234,6 +234,16 @@ object ContextUtil:
     val atticValues = Attic.getItems().asScala.toSet
     val noDefaultMacroSetting = atticValues.contains("-Xmacro-settings:sbt:no-default-task-cache")
     !noDefaultMacroSetting
+
+  def isTaskCacheByDefault(using q: Quotes): Boolean =
+    isTaskCacheByDefault && !xmacroSettings.contains("sbt:no-default-task-cache")
+
+  /** Reflectively calls the experimental `CompilationInfo.XmacroSettings`. */
+  private def xmacroSettings(using q: Quotes): List[String] =
+    val info = q.reflect.CompilationInfo
+    scala.util
+      .Try(info.getClass.getMethod("XmacroSettings").invoke(info).asInstanceOf[List[String]])
+      .getOrElse(Nil)
 end ContextUtil
 
 class ContextUtil0[C <: Quotes & scala.Singleton](override val qctx: C, valStart: Int)
